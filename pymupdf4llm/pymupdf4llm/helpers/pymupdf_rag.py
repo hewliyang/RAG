@@ -626,7 +626,7 @@ def to_markdown(
         md_string = md_string.replace(" ,", ",").replace("-\n", "")
         # write any remaining tables and images
         md_string += output_tables(tabs, None, tab_rects)
-        md_string += output_images(None, tab_rects, None)
+        md_string += output_images(page, None, vg_clusters)  # issue 73
         md_string += "\n-----\n\n"
         while md_string.startswith("\n"):
             md_string = md_string[1:]
