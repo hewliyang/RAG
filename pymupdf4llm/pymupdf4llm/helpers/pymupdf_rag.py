@@ -52,6 +52,14 @@ bullet = (
 GRAPHICS_TEXT = "\n![%s](%s)\n"
 
 
+class ImageFilters:
+    def __init__(self, filters: list):
+        self.filters = filters
+
+    def check_img(self, img: dict) -> bool:
+        return all([func(img) for func in self.filters])
+
+
 class IdentifyHeaders:
     """Compute data for identifying header text."""
 
@@ -144,6 +152,7 @@ def to_markdown(
     page_height=None,
     table_strategy="lines_strict",
     graphics_limit=None,
+    image_checks=[],
 ) -> str:
     """Process the document and return the text of the selected pages.
 
@@ -187,9 +196,7 @@ def to_markdown(
     if len(margins) == 2:
         margins = (0, margins[0], 0, margins[1])
     if len(margins) != 4:
-        raise ValueError(
-            "margins must be one, two or four floats"
-        )
+        raise ValueError("margins must be one, two or four floats")
     elif not all([hasattr(m, "__float__") for m in margins]):
         raise ValueError("margin values must be floats")
 
@@ -197,15 +204,16 @@ def to_markdown(
     # document and use font sizes as header level indicators.
     if callable(hdr_info):
         get_header_id = hdr_info
-    elif hasattr(hdr_info, "get_header_id") and callable(
-        hdr_info.get_header_id
-    ):
+    elif hasattr(hdr_info, "get_header_id") and callable(hdr_info.get_header_id):
         get_header_id = hdr_info.get_header_id
     elif hdr_info is False:
         get_header_id = lambda s, page=None: ""
     else:
         hdr_info = IdentifyHeaders(doc)
         get_header_id = hdr_info.get_header_id
+
+    # Initialize image checks, if any
+    image_filter = ImageFilters(image_checks)
 
     def resolve_links(links, span):
         """Accept a span and return a markdown link string.
@@ -384,9 +392,7 @@ def to_markdown(
                     if ltext:
                         text = f"{hdr_string}{prefix}{ltext}{suffix} "
                     else:
-                        text = (
-                            f"{hdr_string}{prefix}{s['text'].strip()}{suffix} "
-                        )
+                        text = f"{hdr_string}{prefix}{s['text'].strip()}{suffix} "
 
                     if text.startswith(bullet):
                         text = "-  " + text[1:]
@@ -399,9 +405,7 @@ def to_markdown(
             code = False
 
         return (
-            out_string.replace(" \n", "\n")
-            .replace("  ", " ")
-            .replace("\n\n\n", "\n\n")
+            out_string.replace(" \n", "\n").replace("  ", " ").replace("\n\n\n", "\n\n")
         )
 
     def is_in_rects(rect, rect_list):
@@ -503,7 +507,9 @@ def to_markdown(
         textpage = page.get_textpage(flags=textflags, clip=clip)
 
         img_info = [
-            img for img in page.get_image_info() if img["bbox"] in clip
+            img
+            for img in page.get_image_info()
+            if img["bbox"] in clip and image_filter.check_img(img)
         ]
         images = img_info[:]
         tables = []
@@ -573,9 +579,7 @@ def to_markdown(
             if include is True:  # this box is a significant vector graphic
                 vg_clusters.append(bbox)
 
-        actual_paths = [
-            p for p in paths if is_in_rects(p["rect"], vg_clusters)
-        ]
+        actual_paths = [p for p in paths if is_in_rects(p["rect"], vg_clusters)]
 
         vg_clusters0 = [
             r
