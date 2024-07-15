@@ -56,8 +56,14 @@ class ImageFilters:
     def __init__(self, filters: list):
         self.filters = filters
 
-    def check_img(self, img: dict) -> bool:
-        return all([func(img) for func in self.filters])
+    def check_img(self, img_or_rect: any) -> bool:
+        bs = []
+        for filter in self.filters:
+            try:
+                bs.append(filter(img_or_rect))
+            except:
+                bs.append(True)
+        return all(bs)
 
 
 class IdentifyHeaders:
@@ -584,7 +590,9 @@ def to_markdown(
         vg_clusters0 = [
             r
             for r in vg_clusters
-            if not intersects_rects(r, tab_rects0) and r.height > 20
+            if not intersects_rects(r, tab_rects0)
+            and r.height > 20
+            and image_filter.check_img(r)  # check VGs also!
         ]
 
         if write_images is True:
