@@ -243,7 +243,7 @@ def to_markdown(
 
     def save_image(page, rect, i):
         """Optionally render the rect part of a page."""
-        filename = page.parent.name.replace("\\", "/")
+        filename = page.parent.name.replace("\\", "/").replace(" ", "-")
         image_path = f"{filename}-{page.number}-{i}.png"
         if write_images is True:
             page.get_pixmap(clip=rect, dpi=DPI).save(image_path)
